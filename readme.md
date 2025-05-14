@@ -1,38 +1,41 @@
-# 让 API 文档更优雅：使用 `go_scalar_middlewares` 轻松集成 Scalar UI
+# go_scalar_middlewares: Go 项目的现代化 API 文档中间件
 
-## 🧰 什么是 Scalar？
-
-[Scalar](https://scalar.com/) 是一个现代化的 API 文档解决方案，以其简洁美观的界面、强大的功能以及良好的可定制性受到越来越多开发者的喜爱。相比传统的 Swagger UI，Scalar 在视觉体验和交互逻辑上都有显著提升。
-
-Scalar 支持从 OpenAPI（原 Swagger）规范文件自动生成文档，并提供搜索、过滤、代码片段生成等实用功能。通过 `go_scalar_middlewares`，我们可以将这一能力无缝整合进 Go 的 HTTP 服务中。
+<p align="center">
+  <strong>让 OpenAPI 文档展示变得优雅简单</strong>
+</p>
 
 ---
 
-## 📦 核心特性一览
+## 📖 项目简介
 
-- **自动发现 OpenAPI 文件**：支持自动查找并加载 `openapi.json` 或 `openapi.yaml`，优先级目录为 `api`, `doc`, `.`
-- **动态生成 Scalar 文档页面**：根据找到的 OpenAPI 文件路径动态生成 HTML 页面
-- **开箱即用的中间件模式**：兼容标准 `http.HandlerFunc` 接口，便于集成到任何基于 `net/http` 的框架中
-- **优雅的 fallback 处理机制**：当未找到 OpenAPI 文件时返回清晰错误信息，避免静默失败
-- **支持自动注册路由**：通过 `_ "github.com/yeisme/go_scalar_middlewares/auto"` 方式实现零配置注册
+`go_scalar_middlewares` 是一个简洁高效的Go中间件，用于在你的Web应用中无缝集成 [Scalar](https://scalar.com/) API文档界面。Scalar是一个美观、现代的API文档解决方案，相比传统的Swagger UI，它提供了更好的用户体验和功能。
 
----
+本项目提供两种集成方式：
 
-## 🛠️ 快速开始
+- 📌 **中间件模式**：适用于需要精细控制的场景
+- 🚀 **自动注册模式**：实现零代码集成
 
-### 安装
+## ✨ 为什么选择 Scalar？
+
+相比传统的Swagger UI，Scalar提供了：
+
+- 🎨 更现代化、美观的界面设计
+- 🔍 更强大的搜索和导航功能
+- 💻 更友好的代码示例生成
+- 📱 更好的响应式设计，支持移动设备访问
+- ⚡ 更快的加载速度和更流畅的交互体验
+
+## 📦 安装
 
 ```bash
 go get github.com/yeisme/go_scalar_middlewares
 ```
 
-### 基础用法
+## 🚀 快速开始
 
-你可以选择两种方式集成 Scalar 中间件：
+### 方法一：中间件模式
 
-#### ✅ 方法一：手动注册处理器
-
-适用于需要精细控制路由的场景：
+将 Scalar 集成到你现有的 HTTP 处理函数中：
 
 ```go
 package main
@@ -44,51 +47,139 @@ import (
 	"github.com/yeisme/go_scalar_middlewares/middleware"
 )
 
-func helloHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/hello-world" {
-		http.NotFound(w, r)
-		return
-	}
-	fmt.Fprintln(w, "Hello, world from the main application!")
+func myHandler(w http.ResponseWriter, r *http.Request) {
+	// 处理你的 API 请求
+	fmt.Fprintln(w, "API endpoint")
 }
 
 func main() {
-	http.ListenAndServe(":8080", middleware.ScalarAPIDocs(helloHandler))
+	// 包装你的处理函数
+	http.ListenAndServe(":8080", middleware.ScalarAPIDocs(myHandler))
 }
 ```
 
-#### ✅ 方法二：自动注册路由
+### 方法二：自动注册模式
 
-如果你希望以最简方式启用 Scalar 文档，并且不介意根路径 `/` 被占用，可以使用自动注册方式：
+最简单的集成方式，只需导入 `auto` 包：
 
 ```go
 package main
 
 import (
+	"fmt"
 	"net/http"
 
-	_ "github.com/yeisme/go_scalar_middlewares/auto"
+	_ "github.com/yeisme/go_scalar_middlewares/auto" // 导入即启用
 )
 
 func main() {
+	// 注册你的API路由
+	http.HandleFunc("/api/users", usersHandler)
+	
+	// 启动服务
 	http.ListenAndServe(":8080", nil)
 }
 ```
 
-该方式会在根路径下处理所有 Scalar 相关请求，并自动匹配已存在的 API 文档文件。
+通过导入 `auto` 包，Scalar文档会自动注册到根路径，并自动发现你项目中的OpenAPI规范文件。
 
----
+## 🔧 高级配置
 
-### ⚙️ 请求路由
+### 中间件配置选项
 
-| 请求路径            | 行为说明                      |
-| ------------------- | ----------------------------- |
-| `/scalar`           | 返回 Scalar UI 页面           |
-| `/api/openapi.yaml` | 返回 YAML 格式的 OpenAPI 规范 |
-| `/api/openapi.json` | 返回 JSON 格式的 OpenAPI 规范 |
+通过 `middleware.Config` 可以自定义多种配置项：
 
----
+```go
+config := middleware.Config{
+	// 手动指定OpenAPI文件路径
+	JSONSpecPath: "./api/custom-openapi.json",
+	// 或者YAML格式
+	// YAMLSpecPath: "./api/custom-openapi.yaml",
+	
+	// 自定义搜索目录
+	SearchDirs: []string{"./api-docs", "./schemas", "."},
+	
+	// 自定义文档访问路径前缀（默认为 "/scalar"）
+	DocsPath: "/api-docs",
+}
 
-📌 **GitHub 地址**：[https://github.com/yeisme/go_scalar_middlewares](https://github.com/yeisme/go_scalar_middlewares)
+http.ListenAndServe(":8080", middleware.WithConfig(config)(myHandler))
+```
+
+### 自动发现机制
+
+`auto` 包具有智能识别机制，会扫描以下目录寻找有效的OpenAPI规范文件：
+
+- `api/`
+- `doc/`
+- `docs/`
+- `openapi/`
+- 当前目录 `.`
+
+支持的文件格式：
+
+- `.json`
+- `.yaml`
+- `.yml`
+
+第一个被找到的有效规范文件将被用于生成文档。
+
+### 查看自动发现结果
+
+```go
+import "github.com/yeisme/go_scalar_middlewares/auto"
+
+func main() {
+	// 查看发现的文件
+	if auto.IsInitialized() {
+		fmt.Println("找到的OpenAPI文件:")
+		for _, file := range auto.GetFoundSpecFiles() {
+			fmt.Printf("  - %s\n", file)
+		}
+	}
+	
+	// 启动服务
+	http.ListenAndServe(":8080", nil)
+}
+```
+
+## 📋 特性列表
+
+- ✅ **自动发现 OpenAPI 文件**：无需手动配置文件路径
+- ✅ **支持多种文件格式**：同时支持 JSON 和 YAML 格式的规范文件
+- ✅ **灵活的集成方式**：支持中间件模式和自动注册模式
+- ✅ **干净的 URL 映射**：不会干扰你现有的路由系统
+- ✅ **智能回退机制**：找不到规范文件时提供清晰的错误信息
+- ✅ **零配置选项**：适用于快速原型和简单项目
+- ✅ **高度可配置**：适用于复杂项目和特殊需求
+
+## 🌐 访问文档
+
+启动服务后，可通过以下URL访问：
+
+- **Scalar UI**：`http://localhost:8080/scalar` (或你自定义的路径)
+- **JSON 规范**：自动映射到发现的 JSON 文件路径
+- **YAML 规范**：自动映射到发现的 YAML 文件路径
+
+## 📝 示例项目
+
+项目包含两个示例应用：
+
+1. **middleware示例**：`_example/middleware/main.go`
+   展示如何使用中间件模式集成
+
+2. **auto示例**：`_example/auto/main.go`
+   展示如何使用自动注册模式集成
+
+运行示例：
+
+```bash
+cd _example/auto
+go run main.go
+```
+
+然后在浏览器访问 `http://localhost:18081/scalar`
+
+## 📄 许可证
 
 MIT License | Copyright © 2025 Yeisme
